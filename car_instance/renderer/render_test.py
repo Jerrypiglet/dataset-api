@@ -6,6 +6,7 @@
 
 import sys
 import numpy as np
+np.set_printoptions(threshold=np.nan)
 import render_egl
 import pickle as pkl
 import utils.utils as uts
@@ -38,8 +39,11 @@ def test_render():
     depth, mask = render_egl.renderMesh_py(
         vertices_r, faces, intrinsic, imgsize[0], imgsize[1], 0.0)
     assert np.max(depth) > 0
-    print 'passed'
-
-
+    print 'passed.'
+    print 'Shape of depth:', depth.shape, 'Shape of mask:', mask.shape
+    import scipy.misc
+    scipy.misc.imsave('depth_test.jpg', depth)
+    scipy.misc.imsave('mask_test.jpg', mask*255)
+    print 'Depth and mask image are saved to depth_test.jpg and mask_test.jpg.'
 if __name__ == '__main__':
     test_render()
