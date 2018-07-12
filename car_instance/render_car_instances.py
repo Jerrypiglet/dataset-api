@@ -62,7 +62,7 @@ class CarPoseVisualizer(object):
         car = self.car_models[car_name]
         scale = np.ones((3, ))
         pose = np.array(pose)
-        vert = uts.project(pose, scale, car['vertices'])
+        vert = uts.project(pose, scale, car['vertices']) # [*, 3]
         K = self.intrinsic
         intrinsic = np.float64([K[0, 0], K[1, 1], K[0, 2], K[1, 2]])
         depth, mask = render.renderMesh_py(np.float64(vert),
@@ -170,7 +170,7 @@ class CarPoseVisualizer(object):
 
         uts.plot_images({'image_vis': np.uint8(image),
             'depth': self.depth, 'mask': self.mask},
-                        layout=[1, 3])
+                        layout=[1, 3], fig_size=40)
 
         return image, self.mask, self.depth
 

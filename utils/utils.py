@@ -110,7 +110,7 @@ def trans_vec_to_mat(rot, trans, dim=4):
 
 
 def project(pose, scale, vertices):
-    """ transform the vertices of a 3D car model based on labelled pose
+    """ **transform**(not actually projecting) the vertices of a 3D car model based on labelled pose
     Input:
         pose: 0-3 rotation, 4-6 translation
         scale: the scale at each axis of the car
@@ -134,12 +134,12 @@ def project(pose, scale, vertices):
 
 def plot_images(images,
                 layout=[2, 2],
-                fig_size=10,
+                fig_size=20,
                 save_fig=False,
                 is_close=False,
                 fig_name=None):
 
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(20, 10))
     pylab.rcParams['figure.figsize'] = fig_size, fig_size / 2
     Keys = images.keys()
     for iimg, name in enumerate(Keys):
