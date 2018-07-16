@@ -139,7 +139,7 @@ def plot_images(images,
                 is_close=False,
                 fig_name=None):
 
-    plt.figure(figsize=(20, 10))
+    plt.figure(figsize=(40, 10))
     pylab.rcParams['figure.figsize'] = fig_size, fig_size / 2
     Keys = images.keys()
     for iimg, name in enumerate(Keys):
@@ -148,7 +148,7 @@ def plot_images(images,
     for iimg, name in enumerate(Keys):
         s = plt.subplot(layout[0], layout[1], iimg + 1)
         plt.imshow(images[name])
-
+        plt.colorbar()
         s.set_xticklabels([])
         s.set_yticklabels([])
         s.set_title(name)
@@ -158,6 +158,7 @@ def plot_images(images,
     plt.tight_layout()
     if save_fig:
         pylab.savefig(fig_name)
+        print 'Test images saved at %s --utils'%fig_name
     else:
         plt.show()
 

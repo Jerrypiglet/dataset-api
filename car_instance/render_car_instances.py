@@ -170,7 +170,7 @@ class CarPoseVisualizer(object):
 
         uts.plot_images({'image_vis': np.uint8(image),
             'depth': self.depth, 'mask': self.mask},
-                        layout=[1, 3], fig_size=40)
+                        layout=[1, 3], fig_size=40, save_fig=True, fig_name='test')
 
         return image, self.mask, self.depth
 
@@ -185,6 +185,12 @@ if __name__ == '__main__':
     assert args.image_name
     visualizer = CarPoseVisualizer(args)
     visualizer.load_car_models()
-    visualizer.showAnn(args.image_name)
+    image_vis, mask, depth = visualizer.showAnn(args.image_name)
+    # print image_vis.shape
 
+    import scipy.misc
+    scipy.misc.imsave('test_image_vis.jpg', image_vis)
+    scipy.misc.imsave('test_mask.jpg', mask*255)
+    scipy.misc.imsave('test_depth.jpg', depth)
 
+    print "Test images saved at test_{image_vis, mask, depth}.jpg --render_car_instances"
