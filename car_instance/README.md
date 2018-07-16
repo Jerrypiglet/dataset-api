@@ -27,7 +27,7 @@ There are several scripts included with the dataset in a folder named `scripts`
 
  - `car_models.py`  central file defining the IDs of all semantic classes and providing mapping between various class properties.
  - `render_car_instances.py`  script for loading image and render image file
- - 'renderer/'      containing scripts of python wrapper for opengl render a car model from a 3d car mesh. We borrow portion of opengl rendering from [Displets](http://www.cvlibs.net/projects/displets/) and change to egl offscreen render context and python api.
+ - `'renderer/'`      containing scripts of python wrapper for opengl render a car model from a 3d car mesh. We borrow portion of opengl rendering from [Displets](http://www.cvlibs.net/projects/displets/) and change to egl offscreen render context and python api.
  - `install.sh`     installation script of this library. Only tested for Ubuntu.
 
 The scripts can be installed by running install.sh in the bash:
@@ -43,7 +43,7 @@ python render_car_instances.py --image_name='./test_example/pose_res' --data_dir
 
 ## Evaluation
 
-We follow similar instance mean AP evalution with the [coco dataset evaluation](https://github.com/cocodataset/cocoapi), while consider thresholds using 3D car simlarity metrics (distance, orientation, shape), for distance and orientation, we use similar metrics of evaluating self-localization, i.e. the Euclidean distance for translation and arccos distance with quaternions representation.
+We follow similar instance mean AP evalution with the [coco dataset evaluation](https://github.com/cocodataset/cocoapi), while consider thresholds using 3D car simlarity metrics (**distance, orientation, shape**), for distance and orientation, we use similar metrics of evaluating self-localization, i.e. the Euclidean distance for translation and arccos distance with quaternions representation.
 
 For shape similarity, we consider the reprojection mask similarity by projecting the 3D model to 10 angles and compute the IoU between each pair of models. The similarity we have is ```sim_mat.txt```
 
