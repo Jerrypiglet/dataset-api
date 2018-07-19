@@ -38,7 +38,7 @@ Please download the sample data from
 
 Then run the following code to show a rendered results:
 ```bash
-python render_car_instances.py --image_name='./test_example/pose_res' --data_dir='../apolloscape/3d_car_instance_sample'
+python render_car_instances.py --image_name='180116_053947113_Camera_5' --data_dir='../apolloscape/3d_car_instance_sample/'
 ```
 
 ## Evaluation

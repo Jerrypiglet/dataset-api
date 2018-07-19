@@ -11,6 +11,8 @@ import data
 import numpy as np
 import json
 import pickle as pkl
+import sys
+sys.path.insert(0, '../')
 
 import renderer.render_egl as render
 import utils.utils as uts
@@ -145,6 +147,9 @@ class CarPoseVisualizer(object):
 
         car_pose_file = '%s/%s.json' % (
             self._data_config['pose_dir'], image_name)
+        print image_name
+        print car_pose_file
+
         with open(car_pose_file) as f:
             car_poses = json.load(f)
         image_file = '%s/%s.jpg' % (self._data_config['image_dir'], image_name)

@@ -40,7 +40,7 @@ class ApolloScape(object):
                 self._data_config['image_size'][1]
             self._data_config['intrinsic'][c_name][[1, 3]] /= \
                 self._data_config['image_size'][0]
-        self._data_config['car_model_dir'] = ROOT + 'car_models/'
+        self._data_config['car_model_dir'] = ROOT + '/car_models'
 
         return self._data_config
 
