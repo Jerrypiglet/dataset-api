@@ -26,7 +26,7 @@ logger.setLevel(logging.INFO)
 
 
 class CarPoseVisualizer(object):
-    def __init__(self, args=None, scale=0.4, linewidth=0.):
+    def __init__(self, args=None, scale=0.5, linewidth=0.):
         """Initializer
         Input:
             scale: whether resize the image in case image is too large
@@ -109,7 +109,9 @@ class CarPoseVisualizer(object):
                    depth_in,
                    inst_id,
                    total_mask,
-                   total_depth):
+                   total_depth,
+                   total_pose_mask,
+                   pose_list):
         """Merge the prediction of each car instance to a full image
         """
 
@@ -118,11 +120,12 @@ class CarPoseVisualizer(object):
         depth_arr = np.concatenate([render_depth[None, :, :],
                                     total_depth[None, :, :]], axis=0)
         idx = np.argmin(depth_arr, axis=0)
-
         total_depth = np.amin(depth_arr, axis=0)
         total_mask[idx == 0] = inst_id
+        for pose_dim_idx, pose_one_dim in enumerate(pose_list):
+            total_pose_mask[idx == 0, pose_dim_idx] = pose_one_dim
 
-        return total_mask, total_depth
+        return total_mask, total_depth, total_pose_mask
 
     def rescale(self, image, intrinsic):
         """resize the image and intrinsic given a relative scale
@@ -130,12 +133,14 @@ class CarPoseVisualizer(object):
 
         intrinsic_out = uts.intrinsic_vec_to_mat(intrinsic,
                                                  self.image_size)
-        if self.scale != 1.0:
-            hs, ws = self.image_size
-            image_out = cv2.resize(image.copy(), (ws, hs))
+        # if self.scale != 1.0:
+        hs, ws = self.image_size
+        image_out = cv2.resize(image.copy(), (ws, hs))
+        # else:
+        #     image_out = image
         return image_out, intrinsic_out
 
-    def showAnn(self, image_name):
+    def showAnn(self, image_name, if_visualize=False, if_save=False, plot_path='tmp'):
         """Show the annotation of a pose file in an image
         Input:
             image_name: the name of image
@@ -147,38 +152,41 @@ class CarPoseVisualizer(object):
 
         car_pose_file = '%s/%s.json' % (
             self._data_config['pose_dir'], image_name)
-        print image_name
-        print car_pose_file
 
         with open(car_pose_file) as f:
             car_poses = json.load(f)
         image_file = '%s/%s.jpg' % (self._data_config['image_dir'], image_name)
         image = cv2.imread(image_file, cv2.IMREAD_UNCHANGED)[:, :, ::-1]
+        print 'Original and rescaled image size: ', image.shape, self.image_size
         intrinsic = self.dataset.get_intrinsic(image_name)
-        image, self.intrinsic = self.rescale(image, intrinsic)
+        image_rescaled, self.intrinsic = self.rescale(image, intrinsic)
 
         self.depth = self.MAX_DEPTH * np.ones(self.image_size)
         self.mask = np.zeros(self.depth.shape)
+        self.pose_map = np.zeros((self.depth.shape[0], self.depth.shape[1], 6)) + np.inf
+
+        self.pose_list = []
 
         for i, car_pose in enumerate(car_poses):
             car_name = car_models.car_id2name[car_pose['car_id']].name
             depth, mask = self.render_car(car_pose['pose'], car_name)
-            self.mask, self.depth = self.merge_inst(
-                depth, i + 1, self.mask, self.depth)
+            self.mask, self.depth, self.pose_map = self.merge_inst(
+                depth, i + 1, self.mask, self.depth, self.pose_map, car_pose['pose'])
+            self.pose_list.append(car_pose['pose'])
 
         self.depth[self.depth == self.MAX_DEPTH] = -1.0
-        image = 0.5 * image
+        image = 0.5 * image_rescaled
         for i in range(len(car_poses)):
             frame = np.float32(self.mask == i + 1)
             frame = np.tile(frame[:, :, None], (1, 1, 3))
             image = image + frame * 0.5 * self.colors[i, :]
 
-        uts.plot_images({'image_vis': np.uint8(image),
-            'depth': self.depth, 'mask': self.mask},
-                        layout=[1, 3], fig_size=40, save_fig=True, fig_name='test')
+        if if_visualize:
+            uts.plot_images({'image_vis': np.uint8(image),
+                'depth': self.depth, 'mask': self.mask},
+                            layout=[1, 3], fig_size=40, save_fig=if_save, fig_name=plot_path)
 
-        return image, self.mask, self.depth
-
+        return image, self.mask, self.depth, self.pose_map, image_rescaled, self.pose_list
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluation self localization.')
@@ -188,10 +196,10 @@ if __name__ == '__main__':
                         help='the dir of ground truth')
     args = parser.parse_args()
     assert args.image_name
-    visualizer = CarPoseVisualizer(args)
+    visualizer = CarPoseVisualizer(args, scale=0.1)
     visualizer.load_car_models()
     image_vis, mask, depth = visualizer.showAnn(args.image_name)
-    # print image_vis.shape
+    print 'image_vis.shape, mask.shape, depth.shape: ', image_vis.shape, mask.shape, depth.shape
 
     import scipy.misc
     scipy.misc.imsave('test_image_vis.jpg', image_vis)

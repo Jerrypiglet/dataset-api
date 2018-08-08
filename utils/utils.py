@@ -159,8 +159,8 @@ def plot_images(images,
     if save_fig:
         pylab.savefig(fig_name)
         print 'Test images saved at %s --utils'%fig_name
-    else:
-        plt.show()
+    plt.show()
+    plt.close()
 
 
 if __name__ == '__main__':
