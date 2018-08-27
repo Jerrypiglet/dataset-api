@@ -134,13 +134,13 @@ def project(pose, scale, vertices):
 
 def plot_images(images,
                 layout=[2, 2],
-                fig_size=20,
+                fig_size=10,
                 save_fig=False,
                 is_close=False,
                 fig_name=None):
 
-    plt.figure(figsize=(40, 10))
-    pylab.rcParams['figure.figsize'] = fig_size, fig_size / 2
+    plt.figure(figsize=(layout[1]*fig_size, layout[0]*fig_size))
+    # pylab.rcParams['figure.figsize'] = fig_size, fig_size / 2
     Keys = images.keys()
     for iimg, name in enumerate(Keys):
         assert len(images[name].shape) >= 2

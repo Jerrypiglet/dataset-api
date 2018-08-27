@@ -11,8 +11,10 @@ import data
 import numpy as np
 import json
 import pickle as pkl
+from off_utils import Mesh
 import sys
 sys.path.insert(0, '../')
+import os
 
 import renderer.render_egl as render
 import utils.utils as uts
@@ -26,7 +28,7 @@ logger.setLevel(logging.INFO)
 
 
 class CarPoseVisualizer(object):
-    def __init__(self, args=None, scale=0.5, linewidth=0.):
+    def __init__(self, args=None, scale=0.5, codes=None, linewidth=0.):
         """Initializer
         Input:
             scale: whether resize the image in case image is too large
@@ -45,18 +47,40 @@ class CarPoseVisualizer(object):
         self.linewidth = linewidth
         self.colors = np.random.random((self.MAX_INST_NUM, 3)) * 255
 
-    def load_car_models(self):
+        if codes!=None:
+            self.codes = codes
+
+    def load_car_models(self, car_model_dir=None):
         """Load all the car models
         """
         self.car_models = OrderedDict([])
-        logging.info('loading %d car models' % len(car_models.models))
+        self.car_models_all = []
+        # car_model_dir = self._data_config['car_model_dir'] if car_model_dir==None else self._data_config['car_model_dir']
+        car_model_dir = self._data_config['car_model_dir']
+        logging.info('loading %d car models from %s...' % (len(car_models.models), car_model_dir))
         for model in car_models.models:
-            car_model = '%s/%s.pkl' % (self._data_config['car_model_dir'],
+            car_model = '%s/%s.pkl' % (car_model_dir,
                                        model.name)
             with open(car_model) as f:
                 self.car_models[model.name] = pkl.load(f)
                 # fix the inconsistency between obj and pkl
                 self.car_models[model.name]['vertices'][:, [0, 1]] *= -1
+                self.car_models[model.name]['vertices'] = self.car_models[model.name]['vertices']
+                self.car_models_all.append(self.car_models[model.name]['vertices'])
+        alls = np.concatenate(self.car_models_all, axis=0)
+        # print np.amax(alls, axis=0), np.amin(alls, axis=0)
+
+    def load_car_models_off(self, off_path, postfix = ''):
+        """Load all the car models
+        """
+        self.car_models = OrderedDict([])
+        self.car_models_all = []
+        logging.info('loading %d car models' % len(car_models.models))
+        for model in car_models.models:
+            # print 'Loading... ', model
+            car_model = '%s/%s%s.off' % (off_path, model.name, postfix)
+            off_mesh = Mesh.from_off(car_model)
+            self.car_models[model.name] = {'vertices': off_mesh.vertices * 0.01, 'faces': off_mesh.faces+1} # Faces are one-based numbering for this renderer!
 
     def render_car(self, pose, car_name):
         """Render a car instance given pose and car_name
@@ -108,10 +132,12 @@ class CarPoseVisualizer(object):
     def merge_inst(self,
                    depth_in,
                    inst_id,
+                   shape_id,
                    total_mask,
+                   total_shape_id_map,
                    total_depth,
                    total_pose_mask,
-                   pose_list):
+                   pose_list): # depth, i + 1, car_pose['car_id'] + 1, self.mask, self.shape_id_map, self.depth, self.pose_map, car_pose['pose'])
         """Merge the prediction of each car instance to a full image
         """
 
@@ -122,10 +148,11 @@ class CarPoseVisualizer(object):
         idx = np.argmin(depth_arr, axis=0)
         total_depth = np.amin(depth_arr, axis=0)
         total_mask[idx == 0] = inst_id
+        total_shape_id_map[idx == 0] = shape_id
         for pose_dim_idx, pose_one_dim in enumerate(pose_list):
             total_pose_mask[idx == 0, pose_dim_idx] = pose_one_dim
 
-        return total_mask, total_depth, total_pose_mask
+        return total_mask, total_shape_id_map, total_depth, total_pose_mask # self.mask, self.shape_id_map, self.depth, self.pose_map
 
     def rescale(self, image, intrinsic):
         """resize the image and intrinsic given a relative scale
@@ -140,7 +167,24 @@ class CarPoseVisualizer(object):
         #     image_out = image
         return image_out, intrinsic_out
 
-    def showAnn(self, image_name, if_visualize=False, if_save=False, plot_path='tmp'):
+    def showId(self, image_name):
+        car_pose_file = '%s/%s.json' % (
+            self._data_config['pose_dir'], image_name)
+
+        with open(car_pose_file) as f:
+            car_poses = json.load(f)
+
+        self.pose_list = []
+        self.shape_id_list = []
+
+        for i, car_pose in enumerate(car_poses):
+            self.pose_list.append(car_pose['pose'])
+            self.shape_id_list.append(car_pose['car_id'])
+        assert len(self.shape_id_list) == len(self.pose_list), 'Shape and pose lists lengths should match!'
+
+        return self.pose_list, self.shape_id_list
+
+    def showAnn(self, image_name, if_result=False, if_visualize=False, if_save=False, plot_path='tmp', is_training=False):
         """Show the annotation of a pose file in an image
         Input:
             image_name: the name of image
@@ -150,43 +194,54 @@ class CarPoseVisualizer(object):
             image_vis: an image show the overlap of car model and image
         """
 
-        car_pose_file = '%s/%s.json' % (
-            self._data_config['pose_dir'], image_name)
-
-        with open(car_pose_file) as f:
-            car_poses = json.load(f)
         image_file = '%s/%s.jpg' % (self._data_config['image_dir'], image_name)
         image = cv2.imread(image_file, cv2.IMREAD_UNCHANGED)[:, :, ::-1]
-        print 'Original and rescaled image size: ', image.shape, self.image_size
+        # print 'Original and rescaled image size: ', image.shape, self.image_size
         intrinsic = self.dataset.get_intrinsic(image_name)
         image_rescaled, self.intrinsic = self.rescale(image, intrinsic)
 
-        self.depth = self.MAX_DEPTH * np.ones(self.image_size)
-        self.mask = np.zeros(self.depth.shape)
-        self.pose_map = np.zeros((self.depth.shape[0], self.depth.shape[1], 6)) + np.inf
+        if is_training:
+            car_pose_file = '%s/%s.json' % (
+                self._data_config['pose_dir'] if not(if_result) else self._data_config['pose_dir_result'], image_name)
 
-        self.pose_list = []
+            with open(car_pose_file) as f:
+                car_poses = json.load(f)
 
-        for i, car_pose in enumerate(car_poses):
-            car_name = car_models.car_id2name[car_pose['car_id']].name
-            depth, mask = self.render_car(car_pose['pose'], car_name)
-            self.mask, self.depth, self.pose_map = self.merge_inst(
-                depth, i + 1, self.mask, self.depth, self.pose_map, car_pose['pose'])
-            self.pose_list.append(car_pose['pose'])
+            self.depth = self.MAX_DEPTH * np.ones(self.image_size)
+            self.mask = np.zeros(self.depth.shape)
+            self.shape_id_map = np.zeros(self.depth.shape)
+            self.pose_map = np.zeros((self.depth.shape[0], self.depth.shape[1], 6)) + np.inf
+            self.shape_map = np.zeros((self.depth.shape[0], self.depth.shape[1], 10)) + np.inf
 
-        self.depth[self.depth == self.MAX_DEPTH] = -1.0
-        image = 0.5 * image_rescaled
-        for i in range(len(car_poses)):
-            frame = np.float32(self.mask == i + 1)
-            frame = np.tile(frame[:, :, None], (1, 1, 3))
-            image = image + frame * 0.5 * self.colors[i, :]
+            self.pose_list = []
+            self.shape_id_list = []
 
-        if if_visualize:
-            uts.plot_images({'image_vis': np.uint8(image),
-                'depth': self.depth, 'mask': self.mask},
-                            layout=[1, 3], fig_size=40, save_fig=if_save, fig_name=plot_path)
+            for i, car_pose in enumerate(car_poses):
+                car_name = car_models.car_id2name[car_pose['car_id']].name
+                # if if_result:
+                    # car_pose['pose'][-1]  = 1./car_pose['pose'][-1]
+                depth, mask = self.render_car(car_pose['pose'], car_name)
+                self.mask, self.shape_id_map, self.depth, self.pose_map = self.merge_inst(
+                    depth, i + 1, car_pose['car_id'] + 1, self.mask, self.shape_id_map, self.depth, self.pose_map, car_pose['pose'])
+                # print car_name
+                self.pose_list.append(car_pose['pose'])
+                self.shape_id_list.append(car_pose['car_id'])
 
-        return image, self.mask, self.depth, self.pose_map, image_rescaled, self.pose_list
+            self.depth[self.depth == self.MAX_DEPTH] = -1.0
+            image = 0.5 * image_rescaled
+            for i in range(len(car_poses)):
+                frame = np.float32(self.mask == i + 1)
+                frame = np.tile(frame[:, :, None], (1, 1, 3))
+                image = image + frame * 0.5 * self.colors[i, :]
+
+            if if_visualize:
+                uts.plot_images({'image_vis': np.uint8(image),
+                    'shape_id': self.shape_id_map, 'mask': self.mask, 'depth': self.depth},
+                                layout=[1, 4], fig_size=10, save_fig=if_save, fig_name=plot_path)
+
+            return image, self.mask, self.shape_id_map, self.depth, self.pose_map, image_rescaled, self.pose_list, self.shape_id_list
+        else:
+            return None, None, None, None, None, image_rescaled, None, None
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Evaluation self localization.')
