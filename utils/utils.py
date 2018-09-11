@@ -8,6 +8,7 @@ import numpy as np
 import math
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import matplotlib.pylab as pylab
 
 
@@ -116,7 +117,6 @@ def project(pose, scale, vertices):
         scale: the scale at each axis of the car
         vertices: the vertices position
     """
-
     if np.ndim(pose) == 1:
         mat = trans_vec_to_mat(pose[:3], pose[3:])
     elif np.ndim(pose) == 2:
@@ -133,6 +133,8 @@ def project(pose, scale, vertices):
 
 
 def plot_images(images,
+                rot_uvd_array,
+                bbox_list,
                 layout=[2, 2],
                 fig_size=10,
                 save_fig=False,
@@ -149,6 +151,10 @@ def plot_images(images,
         s = plt.subplot(layout[0], layout[1], iimg + 1)
         plt.imshow(images[name])
         plt.colorbar()
+        plt.scatter(rot_uvd_array[:, 3], rot_uvd_array[:, 4])
+        for bbox in bbox_list:
+            currentAxis = plt.gca()
+            currentAxis.add_patch(Rectangle((bbox[0], bbox[2]), bbox[1]-bbox[0], bbox[3]-bbox[2], alpha=1, edgecolor='r', facecolor='none'))
         s.set_xticklabels([])
         s.set_yticklabels([])
         s.set_title(name)
