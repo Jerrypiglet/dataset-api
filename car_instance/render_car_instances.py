@@ -220,8 +220,8 @@ class CarPoseVisualizer(object):
             self.bbox_list = []
             self.shape_id_list = []
 
-            # plt.figure(figsize=(20, 10))
-            # plt.imshow(image_rescaled)
+            plt.figure(figsize=(20, 10))
+            plt.imshow(image_rescaled)
             for i, car_pose in enumerate(car_poses):
                 car_name = car_models.car_id2name[car_pose['car_id']].name
                 # if if_result:
@@ -252,16 +252,20 @@ class CarPoseVisualizer(object):
                 rot_uvd = [car_pose['pose'][0], car_pose['pose'][1], car_pose['pose'][2], u[0, 0], v[0, 0], car_pose['pose'][5]]
                 self.rot_uvd_list.append(rot_uvd)
 
-                # plt.scatter(u, v, linewidths=20)
+                plt.scatter(u, v, linewidths=20)
 
                 F1 = K_hom[0, 0]
                 W = K_hom[0, 2]
                 F2 = K_hom[1, 1]
                 H = K_hom[1, 2]
                 K_T = np.array([[1./F1, 0., -W/F1], [0, 1./F2, -H/F2], [0., 0., 1.]])
+                # print K_T
+                # print self.intrinsic
+                # print F1, W, F2, H
                 uvd = np.vstack((u*d, v*d, d))
                 xyz = np.matmul(K_T, uvd)
                 print 'xyz / pose recovered: ', xyz
+                # print 'uvd:', rot_uvd
 
                 # print car_pose['pose'].shape, vert_transformed.shape
 
@@ -288,13 +292,14 @@ class CarPoseVisualizer(object):
                         bf[:] = np.clip(bf, None, bl)
                 bbox = [b_first[1, 1], b_last[1, 1], b_first[0, 1], b_last[0, 1]] # [x_min, x_max, y_min, y_max]
                 self.bbox_list.append(bbox)
-                # plt.imshow(mask)
-                # currentAxis = plt.gca()
+                plt.imshow(mask)
+                print mask.shape
+                currentAxis = plt.gca()
                 # print (bbox[0], bbox[2]), bbox[1]-bbox[0], bbox[3]-bbox[2]
-                # currentAxis.add_patch(Rectangle((bbox[0], bbox[2]), bbox[1]-bbox[0], bbox[3]-bbox[2], alpha=1, edgecolor='r', facecolor='none'))
-                # plt.show()
-                # break
-            # plt.show()
+                currentAxis.add_patch(Rectangle((bbox[0], bbox[2]), bbox[1]-bbox[0], bbox[3]-bbox[2], alpha=1, edgecolor='r', facecolor='none'))
+                plt.show()
+                break
+            plt.show()
 
             self.depth[self.depth == self.MAX_DEPTH] = -1.0
             image = 0.5 * image_rescaled
