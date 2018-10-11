@@ -297,8 +297,8 @@ class CarPoseVisualizer(object):
                 currentAxis = plt.gca()
                 # print (bbox[0], bbox[2]), bbox[1]-bbox[0], bbox[3]-bbox[2]
                 currentAxis.add_patch(Rectangle((bbox[0], bbox[2]), bbox[1]-bbox[0], bbox[3]-bbox[2], alpha=1, edgecolor='r', facecolor='none'))
-                plt.show()
-                break
+                # plt.show()
+                # break
             plt.show()
 
             self.depth[self.depth == self.MAX_DEPTH] = -1.0
@@ -310,8 +310,7 @@ class CarPoseVisualizer(object):
 
             if if_visualize:
                 uts.plot_images({'image_vis': np.uint8(image),
-                    'shape_id': self.shape_id_map, 'mask': self.mask, 'depth': self.depth}, np.asarray(self.rot_uvd_list), self.bbox_list,
-                                layout=[1, 4], fig_size=10, save_fig=if_save, fig_name=plot_path)
+                    'shape_id': self.shape_id_map, 'mask': self.mask, 'depth': self.depth}, np.asarray(self.rot_uvd_list), self.bbox_list, layout=[1, 4], fig_size=10, save_fig=if_save, fig_name=plot_path)
 
             return image, self.mask, self.shape_id_map, self.depth, self.pose_map, image_rescaled, self.pose_list, self.shape_id_list, self.rot_uvd_list, self.bbox_list
         else:
